@@ -4,6 +4,7 @@
 #include <Adafruit_Sensor.h>
 #include <DHT.h>
 
+
 // Replace with your network credentials
 const char* ssid = "AndroidAPAA86";
 const char* password = "wiuw1034";
