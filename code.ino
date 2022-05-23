@@ -32,6 +32,7 @@ String readDHTTemperature() {
   }
 }
 
+
 String readDHTHumidity() {
   // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
   float h = dht.readHumidity();
