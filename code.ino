@@ -1,16 +1,43 @@
+//boot button  when it is reset with the button pressed, it will start up and wait you to upload new code, instead of running the code already there.
+
+
 // Import required libraries
 #include "WiFi.h"
+//To build the web server we’ll use the ESPAsyncWebServer library as it provides an easy way to build an asynchronous web server.
+//“Handle more than one connection at the same time”;
 #include "ESPAsyncWebServer.h"
+//To read from the DHT sensor, we’ll use the DHT library from Adafruit. 
+//To use this library you also need to install the Adafruit Unified Sensor library.
 #include <Adafruit_Sensor.h>
 #include <DHT.h>
 
+
 // Replace with your network credentials
-const char* ssid = "AndroidAPAA86";
-const char* password = "wiuw1034";
+const char* ssid = "Android";
+const char* password = "password";
 
-#define DHTPIN 4     // Digital pin connected to the DHT sensor
 
+unsigned long previousMillis = 0;
+unsigned long interval = 30000;
+
+// Digital pin connected to the DHT sensor
+#define DHTPIN 2 
+
+//spits out a digital signal on the data pin (no analog input pins needed)
+//The digital signal is fairly easy to read using any microcontroller.
+//3 to 5V power and I/O
+//The DHT sensors are made of two parts, a capacitive humidity sensor and a thermistor. 
+// DHT 11
+#define DHTTYPE DHT11
+
+// Initialize DHT sensor.
 DHT dht(DHTPIN, DHTTYPE);
+
+// Adds a led light (in that case, it is green) to pin 14.
+const int greenLED = 14;  
+
+// Adds a buzzer to pin 32.
+const int buzzer = 32; 
 
 // Create AsyncWebServer object on port 80
 AsyncWebServer server(80);
@@ -19,11 +46,16 @@ String readDHTTemperature() {
   // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
   // Read temperature as Celsius (the default)
   float t = dht.readTemperature();
-  // Read temperature as Fahrenheit (isFahrenheit = true)
-  //float t = dht.readTemperature(true);
+  if(t>30){                           // See if the temperature is bigger than 30C.
+    digitalWrite(greenLED, HIGH);    // The green led will turn on.
+  }
+  else{
+    digitalWrite(greenLED, LOW);    // The green led will turn off.
+  }
   // Check if any reads failed and exit early (to try again).
   if (isnan(t)) {    
     Serial.println("Failed to read from DHT sensor!");
+    //prints dash on web page
     return "--";
   }
   else {
@@ -32,12 +64,18 @@ String readDHTTemperature() {
   }
 }
 
-
 String readDHTHumidity() {
   // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
   float h = dht.readHumidity();
+  if(h>40){                           // See if the humidity is bigger than 40C.
+    digitalWrite(buzzer, HIGH);    // The buzzer will turn on.
+  }
+  else{
+    digitalWrite(buzzer, LOW);    // The buzzer will turn off.
+  }
   if (isnan(h)) {
     Serial.println("Failed to read from DHT sensor!");
+    //prints dash on web page
     return "--";
   }
   else {
@@ -120,20 +158,32 @@ String processor(const String& var){
   return String();
 }
 
+
+
+void initWiFi() {
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+  Serial.print("Connecting to WiFi ..");
+  while (WiFi.status() != WL_CONNECTED) {
+    Serial.print('.');
+    delay(1000);
+  }
+}
+
+
+
 void setup(){
   // Serial port for debugging purposes
-  Serial.begin(115200);
-
-  dht.begin();
-  
-  // Connect to Wi-Fi
-  WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(1000);
-    Serial.print(".");
-  }
-
-  // Print ESP32 Local IP Address
+Serial.begin(115200);
+ pinMode(greenLED, OUTPUT);           // Change to output the greenLED pin.
+ pinMode(buzzer, OUTPUT);           // Change to output the buzzer pin.
+ dht.begin();
+  initWiFi();
+  Serial.print("RSSI: ");
+  Serial.println(WiFi.RSSI());
+  Serial.println("WiFi connected");
+  Serial.println("IP address: ");
+// Print ESP32 Local IP Address
   Serial.println(WiFi.localIP());
 
   // Route for root / web page
@@ -150,7 +200,18 @@ void setup(){
   // Start server
   server.begin();
 }
- 
+
+
 void loop(){
+
+   unsigned long currentMillis = millis();
+  // if WiFi is down, try reconnecting every CHECK_WIFI_TIME seconds
+  if ((WiFi.status() != WL_CONNECTED) && (currentMillis - previousMillis >=interval)) {
+    Serial.print(millis());
+    Serial.println("Reconnecting to WiFi...");
+    WiFi.disconnect();
+    WiFi.reconnect();
+    previousMillis = currentMillis;
+  }
   
 }
